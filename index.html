@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 0.75rem; /* Rounded corners */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .title-gradient {
+            background: linear-gradient(to right, #4f46e5, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .btn-primary {
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca; /* Darker Indigo */
+        }
+        .input-area, .results-area {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border: 1px solid #e5e7eb; /* Gray border */
+            border-radius: 0.5rem;
+        }
+        .results-area h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #374151; /* Dark Gray */
+            margin-bottom: 0.75rem;
+            border-bottom: 2px solid #4f46e5;
+            padding-bottom: 0.5rem;
+        }
+        .results-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px dashed #d1d5db; /* Light Gray Dashed */
+        }
+        .results-list li:last-child {
+            border-bottom: none;
+        }
+        .error-message {
+            color: #ef4444; /* Red */
+            background-color: #fee2e2; /* Light Red */
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #fca5a5; /* Light Red Border */
+            margin-top: 1rem;
+        }
+        .info-message {
+            color: #10b981; /* Green */
+            background-color: #d1fae5; /* Light Green */
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #6ee7b7; /* Light Green Border */
+            margin-top: 1rem;
+        }
+        /* Custom file input styling */
+        input[type="file"] {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            width: 100%;
+        }
+        input[type="file"]::file-selector-button {
+            margin-right: 0.5rem;
+            border: none;
+            background: #4f46e5;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.25rem;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color .15s ease-in-out;
+        }
+        input[type="file"]::file-selector-button:hover {
+            background: #4338ca;
+        }
+        textarea {
+            min-height: 150px;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold title-gradient">Transfer System</h1>
+            <p class="text-gray-600 mt-2">Upload your CSV data to allocate locations based on preferences and priority.</p>
+        </header>
+
+        <div class="input-area bg-gray-50">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Input Preferences Data</h2>
+            
+            <div class="mb-4">
+                <label for="csvFileInput" class="block text-sm font-medium text-gray-700 mb-1">Upload CSV File:</label>
+                <input type="file" id="csvFileInput" accept=".csv" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+            </div>
+
+            <div class="text-center my-2 text-gray-500">OR</div>
+
+            <div>
+                <label for="csvTextArea" class="block text-sm font-medium text-gray-700 mb-1">Paste CSV Data:</label>
+                <textarea id="csvTextArea" rows="8" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2" placeholder="Name,Priority,Preference1,Preference2,...\nJohn Doe,1,LocationA,LocationB\nJane Smith,2,LocationC,LocationA"></textarea>
+                <p class="mt-1 text-xs text-gray-500">Ensure the first row is headers (e.g., Name,Priority,Pref1,Pref2,...). Priority should be a number (lower is higher).</p>
+            </div>
+
+            <button id="processButton" class="btn-primary mt-6 w-full sm:w-auto">Process Allocations</button>
+            <div id="messageArea" class="mt-4"></div>
+        </div>
+
+        <div id="resultsDisplay" class="results-area mt-6 hidden">
+            <div id="allocationsResult" class="mb-6">
+                <h3><span class="text-indigo-600">✔</span> Successful Allocations</h3>
+                <ul id="allocationsList" class="results-list text-gray-700"></ul>
+            </div>
+            <div id="unallocatedResult" class="mb-6">
+                <h3><span class="text-yellow-500">⚠</span> Unallocated People</h3>
+                <ul id="unallocatedList" class="results-list text-gray-700"></ul>
+            </div>
+            <div id="vacantResult">
+                <h3><span class="text-blue-500">❖</span> Vacant Locations</h3>
+                <ul id="vacantList" class="results-list text-gray-700"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const csvFileInput = document.getElementById('csvFileInput');
+        const csvTextArea = document.getElementById('csvTextArea');
+        const processButton = document.getElementById('processButton');
+        const resultsDisplay = document.getElementById('resultsDisplay');
+        const allocationsList = document.getElementById('allocationsList');
+        const unallocatedList = document.getElementById('unallocatedList');
+        const vacantList = document.getElementById('vacantList');
+        const messageArea = document.getElementById('messageArea');
+
+        // --- Event Listener ---
+        processButton.addEventListener('click', handleProcess);
+        csvFileInput.addEventListener('change', handleFileSelect);
+
+        // --- Functions ---
+
+        /**
+         * Handles the file selection event. Reads the file and populates the textarea.
+         */
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    csvTextArea.value = e.target.result;
+                    showMessage('File loaded. Click "Process Allocations".', 'info');
+                };
+                reader.onerror = function() {
+                    showMessage('Error reading file.', 'error');
+                }
+                reader.readAsText(file);
+            }
+        }
+
+        /**
+         * Main handler for processing the CSV data.
+         */
+        function handleProcess() {
+            clearMessages();
+            const csvData = csvTextArea.value.trim();
+            if (!csvData) {
+                showMessage('Please upload a CSV file or paste CSV data into the text area.', 'error');
+                return;
+            }
+
+            try {
+                // Step 1: Parse CSV data
+                const { people, allLocations, error } = parseCSV(csvData);
+
+                if (error) {
+                    showMessage(`Error parsing CSV: ${error}`, 'error');
+                    resultsDisplay.classList.add('hidden');
+                    return;
+                }
+                
+                if (people.length === 0) {
+                    showMessage('No data found in CSV or CSV format is incorrect after headers.', 'error');
+                    resultsDisplay.classList.add('hidden');
+                    return;
+                }
+
+                // Step 2: Sort people by priority (lower number = higher priority)
+                people.sort((a, b) => a.priority - b.priority);
+
+                // Step 3: Allocate locations
+                const assignedLocations = new Set();
+                const allocations = {}; // Using an object as a dictionary
+                const unallocatedPeople = [];
+
+                for (const person of people) {
+                    let allocated = false;
+                    for (const loc of person.preferences) {
+                        if (loc && !assignedLocations.has(loc)) { // Ensure loc is not empty/undefined
+                            allocations[person.name] = loc;
+                            assignedLocations.add(loc);
+                            allocated = true;
+                            break;
+                        }
+                    }
+                    if (!allocated) {
+                        unallocatedPeople.push(person.name);
+                    }
+                }
+
+                // Step 4: Determine unallocated locations
+                const vacantLocations = new Set();
+                allLocations.forEach(loc => {
+                    if (loc && !assignedLocations.has(loc)) { // Ensure loc is not empty/undefined
+                        vacantLocations.add(loc);
+                    }
+                });
+                
+                // Display results
+                displayResults(allocations, unallocatedPeople, Array.from(vacantLocations));
+                showMessage('Processing complete!', 'info');
+
+            } catch (e) {
+                console.error("Processing error:", e);
+                showMessage(`An unexpected error occurred during processing: ${e.message}. Check console for details.`, 'error');
+                resultsDisplay.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Parses the CSV string into structured data.
+         * @param {string} csvString - The raw CSV data as a string.
+         * @returns {object} An object containing people, allLocations, and an optional error message.
+         */
+        function parseCSV(csvString) {
+            const people = [];
+            const allLocations = new Set();
+            let parseError = null;
+
+            const lines = csvString.split('\n').map(line => line.trim()).filter(line => line);
+            if (lines.length < 2) { // At least one header and one data row
+                return { people, allLocations, error: "CSV data must include a header row and at least one data row." };
+            }
+
+            const headers = lines[0].split(',').map(h => h.trim()); // Skip header for processing, but good to have
+            // Basic validation for expected headers (optional, but good practice)
+            if (headers.length < 2 || !headers[0].toLowerCase().includes('name') || !headers[1].toLowerCase().includes('priority')) {
+                 console.warn("CSV headers might not be as expected. First column should be Name, second Priority.");
+            }
+
+
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i].split(',').map(cell => cell.trim());
+                if (row.length < 2) { // Must have at least name and priority
+                    parseError = `Row ${i+1} has insufficient data: "${lines[i]}"`;
+                    break; 
+                }
+                
+                const name = row[0];
+                const priorityString = row[1];
+                const preferences = row.slice(2).filter(p => p); // Filter out empty preference strings
+
+                if (!name) {
+                    parseError = `Row ${i+1} is missing a name: "${lines[i]}"`;
+                    break;
+                }
+
+                const priority = parseInt(priorityString);
+                if (isNaN(priority)) {
+                    parseError = `Row ${i+1} has an invalid priority for ${name}: "${priorityString}". Priority must be a number.`;
+                    break;
+                }
+                
+                people.push({ priority, name, preferences });
+                preferences.forEach(loc => {
+                    if (loc) allLocations.add(loc); // Add to all locations if not empty
+                });
+            }
+            
+            if (parseError) {
+                 return { people: [], allLocations: new Set(), error: parseError };
+            }
+            return { people, allLocations, error: null };
+        }
+
+        /**
+         * Displays the allocation results on the page.
+         * @param {object} allocations - Object mapping names to allocated locations.
+         * @param {string[]} unallocatedPeople - Array of names of unallocated people.
+         * @param {string[]} vacantLocations - Array of vacant location names.
+         */
+        function displayResults(allocations, unallocatedPeople, vacantLocations) {
+            // Clear previous results
+            allocationsList.innerHTML = '';
+            unallocatedList.innerHTML = '';
+            vacantList.innerHTML = '';
+
+            // Populate Allocations
+            if (Object.keys(allocations).length > 0) {
+                document.getElementById('allocationsResult').classList.remove('hidden');
+                for (const name in allocations) {
+                    const li = document.createElement('li');
+                    li.textContent = `${name}  ➔  ${allocations[name]}`;
+                    allocationsList.appendChild(li);
+                }
+            } else {
+                 const li = document.createElement('li');
+                 li.textContent = 'No successful allocations.';
+                 li.className = 'text-gray-500 italic';
+                 allocationsList.appendChild(li);
+            }
+
+
+            // Populate Unallocated People
+            if (unallocatedPeople.length > 0) {
+                document.getElementById('unallocatedResult').classList.remove('hidden');
+                unallocatedPeople.forEach(name => {
+                    const li = document.createElement('li');
+                    li.textContent = name;
+                    unallocatedList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'All people requiring allocation have been assigned a location (if preferences were available and locations were free).';
+                li.className = 'text-gray-500 italic';
+                unallocatedList.appendChild(li);
+            }
+
+            // Populate Vacant Locations
+            if (vacantLocations.length > 0) {
+                document.getElementById('vacantResult').classList.remove('hidden');
+                vacantLocations.forEach(loc => {
+                    const li = document.createElement('li');
+                    li.textContent = loc;
+                    vacantList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'No locations are vacant (among those listed in preferences).';
+                li.className = 'text-gray-500 italic';
+                vacantList.appendChild(li);
+            }
+
+            resultsDisplay.classList.remove('hidden');
+        }
+
+        /**
+         * Displays a message in the message area.
+         * @param {string} text - The message text.
+         * @param {'info' | 'error'} type - The type of message.
+         */
+        function showMessage(text, type = 'info') {
+            messageArea.innerHTML = ''; // Clear previous messages
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = text;
+            if (type === 'error') {
+                messageDiv.className = 'error-message';
+            } else {
+                messageDiv.className = 'info-message';
+            }
+            messageArea.appendChild(messageDiv);
+        }
+
+        /**
+         * Clears any messages from the message area.
+         */
+        function clearMessages() {
+            messageArea.innerHTML = '';
+        }
+
+    </script>
+</body>
+</html>
